@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Endless Coastal Drive - Smooth Engine Build</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="sceneRoot"></div>
+
+  <div id="hud">
+    <section class="card top-left">
+      <div class="row"><span>Zone</span><strong id="zoneText">City</strong></div>
+      <div class="row"><span>Next</span><strong id="nextText">Forest in 0.9 km</strong></div>
+      <div class="row"><span>Nearest petrol</span><strong id="petrolText">--</strong></div>
+      <div class="row"><span>Time</span><strong id="timeText">Day</strong></div>
+      <div class="row"><span>FPS</span><strong id="fpsText">--</strong></div>
+      <div class="row"><span>Controls</span><strong>W/A/S/D · Shift/Ctrl · R refuel</strong></div>
+    </section>
+
+    <section class="card top-right">
+      <div class="fuel-head"><span>Fuel state</span><strong id="fuelState">Low fuel</strong></div>
+      <div class="stat-grid">
+        <div><span>Speed</span><strong id="speedTop">0 km/h</strong></div>
+        <div><span>RPM</span><strong id="rpmTop">800</strong></div>
+        <div><span>Gear</span><strong id="gearTop">N</strong></div>
+        <div><span>Fuel</span><strong id="fuelTop">5.0 L</strong></div>
+        <div><span>Distance</span><strong id="distanceTop">0.00 km</strong></div>
+        <div><span>Avg mileage</span><strong id="avgTop">0.0 km/L</strong></div>
+      </div>
+    </section>
+
+    <section id="stationPrompt" class="card station hidden">
+      <h3 id="stationPromptTitle">Petrol bunk nearby</h3>
+      <p id="stationPromptText">Stop near the bunk and press R to refuel.</p>
+      <div class="actions">
+        <button id="promptRefuelBtn" class="primary">Open Refuel</button>
+        <button id="promptDismissBtn">Dismiss</button>
+      </div>
+    </section>
+
+    <div id="honkText">HONK</div>
+
+    <section class="dash">
+      <div id="speedGauge" class="gauge blue" style="--fill:0deg">
+        <div class="inner"><strong id="speedValue">0</strong><span>km/h</span></div>
+      </div>
+      <div id="rpmGauge" class="gauge yellow" style="--fill:0deg">
+        <div class="inner"><strong id="rpmValue">800</strong><span>rpm</span></div>
+      </div>
+      <div class="wheel-wrap">
+        <div id="steeringWheel" class="wheel"><span>DRIVE</span></div>
+        <div class="trip"><strong id="tripText">0.00 km driven</strong><span id="tripSub">Gear N · Avg 0.0 km/L</span></div>
+      </div>
+      <div id="fuelGauge" class="gauge green" style="--fill:0deg">
+        <div class="inner"><strong id="fuelValue">5.0</strong><span>litres</span></div>
+      </div>
+    </section>
+
+    <section class="card map-card">
+      <h3>In-car GPS</h3>
+      <canvas id="miniMap" width="280" height="150"></canvas>
+      <p id="mapMeta">Nearest petrol bunk: <strong>--</strong><br>Average mileage: <strong>0.0 km/L</strong></p>
+      <div class="actions">
+        <button id="mapBtn">Open Map</button>
+        <button id="pauseBtn">Pause</button>
+      </div>
+    </section>
+
+    <button id="mainMenuBtn" class="floating">Main Menu</button>
+  </div>
+
+  <div id="menuLayer" class="modal-layer active">
+    <div class="modal wide">
+      <p class="eyebrow">Smooth fixed-step engine build</p>
+      <h1>Endless Coastal Drive</h1>
+      <p class="lead">
+        Rewritten as separate HTML, CSS, engine, and game files. The engine uses fixed-step simulation with interpolated rendering,
+        adaptive pixel ratio, chunk streaming, and no per-frame geometry rebuilding.
+      </p>
+      <div class="actions">
+        <button id="startBtn" class="primary">Start Drive</button>
+        <button id="settingsBtn">Settings</button>
+        <button id="helpBtn">Controls</button>
+        <button id="menuMapBtn">Preview Map</button>
+      </div>
+      <div class="tiles">
+        <div class="tile"><h3>Driving</h3><p>W forward, A left, S back/reverse, D right. Shift up and Ctrl downshift keep the manual gear feature.</p></div>
+        <div class="tile"><h3>Refueling</h3><p>You start with 5 litres. Stop beside petrol bunks and press R to fill the tank.</p></div>
+        <div class="tile"><h3>World</h3><p>City, forest, beach highway, desert canyon, snow mountains, and neon valley.</p></div>
+        <div class="tile"><h3>Smoothness</h3><p>Simulation runs at 60 Hz; rendering interpolates between physics states for smoother motion.</p></div>
+      </div>
+      <div class="time-options">
+        <button class="timeBtn active" data-mode="day">Day</button>
+        <button class="timeBtn" data-mode="night">Night</button>
+        <button class="timeBtn" data-mode="auto">Auto cycle</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="pauseLayer" class="modal-layer">
+    <div class="modal">
+      <p class="eyebrow">Paused</p>
+      <h1>Pause Menu</h1>
+      <div class="actions">
+        <button id="resumeBtn" class="primary">Resume</button>
+        <button id="pauseMapBtn">Open Map</button>
+        <button id="pauseSettingsBtn">Settings</button>
+        <button id="restartBtn">Restart</button>
+        <button id="pauseMenuBtn">Main Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="settingsLayer" class="modal-layer">
+    <div class="modal wide">
+      <p class="eyebrow">Settings</p>
+      <h1>Drive Settings</h1>
+      <label class="setting"><span><strong>Time mode</strong><em>Day, night, or automatic cycle.</em></span><select id="timeModeSelect"><option value="day">Day</option><option value="night">Night</option><option value="auto">Auto cycle</option></select></label>
+      <label class="setting"><span><strong>Steering sensitivity</strong><em>Higher turns faster.</em></span><input id="steerRange" type="range" min="0.7" max="1.6" step="0.05" value="1"></label>
+      <label class="setting"><span><strong>Fuel burn</strong><em>Higher makes refueling harder.</em></span><input id="fuelRange" type="range" min="0.7" max="1.8" step="0.05" value="1"></label>
+      <label class="setting"><span><strong>Camera distance</strong><em>Closer feels faster.</em></span><input id="cameraRange" type="range" min="7" max="16" step="0.5" value="10"></label>
+      <div class="actions"><button id="settingsBackBtn" class="primary">Back</button></div>
+    </div>
+  </div>
+
+  <div id="helpLayer" class="modal-layer">
+    <div class="modal wide">
+      <p class="eyebrow">Controls</p>
+      <h1>Controls</h1>
+      <div class="tiles">
+        <div class="tile"><h3>Movement</h3><p>W = front/forward, A = left, S = back/reverse, D = right. Arrow keys mirror the same controls.</p></div>
+        <div class="tile"><h3>Gears</h3><p>Shift = upshift. Ctrl = downshift. Gear order: R, N, 1, 2, 3, 4, 5. S can auto-enter reverse when stopped.</p></div>
+        <div class="tile"><h3>Car features</h3><p>H toggles headlights. G horn. Space handbrake. C camera. M map. Esc pause.</p></div>
+        <div class="tile"><h3>Fuel</h3><p>Use the GPS to find petrol bunks. Stop beside one and press R to open the refuel modal.</p></div>
+      </div>
+      <div class="actions"><button id="helpBackBtn" class="primary">Back</button></div>
+    </div>
+  </div>
+
+  <div id="mapLayer" class="modal-layer">
+    <div class="modal wide">
+      <p class="eyebrow">Navigation</p>
+      <h1>Route Map</h1>
+      <canvas id="bigMap" width="920" height="500"></canvas>
+      <p id="bigMapSummary" class="lead">Route map uses the same road curve as the 3D road.</p>
+      <div class="actions"><button id="mapBackBtn" class="primary">Back</button></div>
+    </div>
+  </div>
+
+  <div id="refuelLayer" class="modal-layer">
+    <div class="modal">
+      <p class="eyebrow">Petrol bunk</p>
+      <h1>Refuel</h1>
+      <p id="refuelLead" class="lead">Stop beside a petrol bunk to fill the tank.</p>
+      <div class="tiles one">
+        <div class="tile"><h3>Fuel</h3><p><strong id="refuelFuel">0.0 L</strong></p></div>
+        <div class="tile"><h3>Needed</h3><p><strong id="refuelNeed">0.0 L</strong></p></div>
+        <div class="tile"><h3>Station</h3><p><strong id="refuelStation">--</strong></p></div>
+      </div>
+      <div class="actions"><button id="confirmRefuelBtn" class="primary">Fill Tank</button><button id="cancelRefuelBtn">Cancel</button></div>
+    </div>
+  </div>
+
+  <div id="gameOverLayer" class="modal-layer">
+    <div class="modal">
+      <p class="eyebrow danger">Out of fuel</p>
+      <h1>The car stopped</h1>
+      <p class="lead">You ran out of fuel. Use petrol bunk markers on the GPS to plan the next run.</p>
+      <div class="actions"><button id="gameOverRestartBtn" class="primary">Restart</button><button id="gameOverMenuBtn">Main Menu</button></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script src="engine.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
